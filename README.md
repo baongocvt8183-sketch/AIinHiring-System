@@ -2,7 +2,7 @@
 projectofptthon
 # Tiểu luận môn Lập trình Python, chọn bộ công nghệ:
 Python + Streamlit + Pandas + PostgreSQL + SQLAlchemy + Plotly + PyMuPDF.
-# luồng xuyên suốt:
+# Luồng xuyên suốt:
 nhập dữ liệu → làm sạch → lưu kho dữ liệu → phân tích pipeline → xử lý CV → kiểm duyệt theo quyền.
 # Xây dựng một ứng dụng Python có khả năng:
 - Thu thập dữ liệu từ nhiều nguồn.
