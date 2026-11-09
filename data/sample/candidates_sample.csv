@@ -1,0 +1,19 @@
+﻿Họ tên,Email,Số điện thoại,Vị trí,Phòng ban,Nguồn,Ngày ứng tuyển,Trạng thái,Vòng,Kỹ năng yêu cầu
+Đặng Văn Khoa,khoa.dang@example.com,0901111111,Data Engineer,Data,LinkedIn,2026-10-01,Đang xử lý,CV Screening,Python; SQL; Airflow; Spark
+Nguyễn Thị Mai,mai.nguyen@example.com,0902222222,Data Analyst,Data,TopCV,05/10/2026,Đang xử lý,Online Test,SQL; Power BI
+Trần Quốc Bảo,bao.tran@example.com,0903333333,AI Engineer,AI Lab,Referral,2026-10-12,Đang xử lý,CV Screening,Python; PyTorch; NLP
+Trần Quốc Bảo,bao.tran@example.com,0903333333,AI Engineer,AI Lab,Referral,2026-10-12,Đang xử lý,CV Screening,Python; PyTorch; NLP
+Lê Thị Hồng,hong.le@,0904444444,Backend Developer,Engineering,Facebook,2026-10-15,Đang xử lý,CV Screening,Python; FastAPI
+,missing.name@example.com,0905555555,Backend Developer,Engineering,TopCV,2026-10-16,Đang xử lý,CV Screening,Python; PostgreSQL
+Võ Văn Nam,nam.vo@example.com,0906666666,Backend Developer,Engineering,Facebook,2026-10-20,Đã tuyển,Hired,Python; FastAPI; PostgreSQL
+Bùi Minh Tâm,tam.bui@example.com,0907777777,Data Analyst,Data,LinkedIn,2026-10-22,Từ chối,CV Screening,SQL; Excel
+Phan Thị Yến,yen.phan@example.com,,AI Engineer,AI Lab,TopCV,2026-11-01,Đang xử lý,Online Test,Python; Machine Learning
+Nguyễn Văn An,an.nguyen@example.com,0909999999,AI Engineer,AI Lab,LinkedIn,2026-11-02,Đang xử lý,Technical Interview,Python; Machine Learning
+Hoàng Gia Hân,han.hoang@example.com,0908888888,Data Analyst,Data,Referral,2026-11-03,Đang xử lý,CV Screening,SQL; Tableau
+Đỗ Thanh Tùng,tung.do@example.com,0901231234,Backend Developer,Engineering,Facebook,2026-11-04,Đang xử lý,Technical Interview,Python; Docker
+Lý Bảo Châu,chau.ly@example.com,0903213210,AI Engineer,AI Lab,TopCV,2026-11-05,Tạm dừng,Technical Interview,Python; NLP
+,no.job@example.com,0904564567,,Data,LinkedIn,2026-11-05,Đang xử lý,CV Screening,SQL
+Nguyễn Thị Mai,mai.nguyen@example.com,0902222222,Data Engineer,Data,TopCV,2026-11-05,Đang xử lý,CV Screening,Python; SQL; Spark
+Ngô Bảo Long,long.ngo@example.com,0906546543,Backend Developer,Engineering,LinkedIn,ngày mai,Đang xử lý,CV Screening,Python; SQL
+Trịnh Thị Thu,thu.trinh@example.com,0907778889,Data Analyst,Data,TopCV,2099-01-01,Đang xử lý,CV Screening,SQL; Excel
+Phạm Văn Tài,,0908889990,Data Analyst,Data,Referral,2026-11-06,Đang xử lý,CV Screening,SQL; Python

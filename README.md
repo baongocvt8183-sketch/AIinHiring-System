@@ -961,3 +961,226 @@ Kịch bản demo xuyên suốt:
 Dự án cần được xây dựng như một hệ thống thống nhất, không phải năm chức năng độc lập. PostgreSQL là nền tảng dữ liệu; ETL đưa dữ liệu về cấu trúc chuẩn; dashboard khai thác dữ liệu lịch sử; NLP/AI hỗ trợ phân tích CV; RBAC và audit log bảo vệ dữ liệu và giúp truy vết hoạt động.
 
 Để hoàn thành tiểu luận đúng hạn, hãy ưu tiên phiên bản MVP có thể chạy xuyên suốt từ nhập dữ liệu đến dashboard, phân tích CV và kiểm tra phân quyền. Chỉ bổ sung mô hình AI phức tạp hoặc tích hợp API ngoài sau khi các phần cốt lõi hoạt động ổn định.
+
+---
+
+## 15. Hướng dẫn chạy bản đã triển khai
+
+Phần này mô tả mã nguồn thực tế đi kèm đặc tả. Ứng dụng đã hoàn thiện MVP ở trên; mọi dữ liệu demo là giả lập.
+
+### 15.1. Yêu cầu môi trường
+
+- Python 3.11 trở lên (đã kiểm thử với Python 3.14).
+- pip và virtual environment.
+- PostgreSQL 14+ nếu chạy cấu hình đầy đủ. Chế độ demo nhanh dùng SQLite, không cần cài PostgreSQL.
+- Trình duyệt hiện đại cho Streamlit.
+
+### 15.2. Chạy nhanh bằng SQLite (khuyến nghị để chấm/demo)
+
+```bash
+cd AIinHiring-System
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Tạo schema + dữ liệu demo (tự động dùng data/recruitment.db)
+python scripts/init_db.py
+
+# Chạy ứng dụng
+streamlit run app.py
+```
+
+Mở `http://localhost:8501`. Nếu chưa có `.env`, ứng dụng tự dùng SQLite tại `data/recruitment.db`. Lần chạy đầu tiên cũng tự tạo schema và seed nếu CSDL đang trống.
+
+Có thể tạo `.env` từ mẫu:
+
+```bash
+cp .env.example .env
+```
+
+Các biến quan trọng: `DATABASE_URL`, `DATA_DIR`, `UPLOAD_DIR`, `MAX_UPLOAD_MB`, `MAX_ETL_ROWS`, `SEED_DEMO_DATA`.
+
+### 15.3. Chạy với PostgreSQL
+
+Tạo user và database (ví dụ trên máy local):
+
+```bash
+sudo -u postgres psql
+```
+
+```sql
+CREATE USER recruitment WITH PASSWORD 'recruitment';
+CREATE DATABASE recruitment_ai OWNER recruitment;
+\q
+```
+
+Trong `.env`:
+
+```dotenv
+DATABASE_URL=postgresql+psycopg://recruitment:recruitment@localhost:5432/recruitment_ai
+```
+
+Sau đó tạo schema và dữ liệu demo bằng một trong hai cách.
+
+**Cách A — để ứng dụng tạo schema từ ORM (đơn giản nhất):**
+
+```bash
+python scripts/init_db.py
+streamlit run app.py
+```
+
+**Cách B — nạp DDL PostgreSQL thủ công:**
+
+```bash
+psql -h localhost -U recruitment -d recruitment_ai -f sql/schema.sql
+psql -h localhost -U recruitment -d recruitment_ai -f sql/seed.sql
+python scripts/init_db.py
+```
+
+`sql/seed.sql` chỉ nạp catalogue vai trò và vòng tuyển; `scripts/init_db.py` tạo tài khoản demo, ứng viên, hồ sơ, lịch sử vòng, CV và audit mẫu. Bước này an toàn khi catalogue đã tồn tại.
+
+> Lưu ý: `psql` dùng URL dạng `postgresql://...`; chuỗi cấu hình của SQLAlchemy có thêm driver, ví dụ `postgresql+psycopg://...`. Không commit `.env`, database dump hoặc CV thật vào repository.
+
+### 15.4. Tài khoản demo
+
+| Vai trò | Tên đăng nhập | Mật khẩu | Phạm vi chính |
+|---|---|---|---|
+| HR Manager | `hr` | `Hr@12345` | Toàn bộ ETL, dashboard, ứng viên, CV, duyệt AI |
+| Hiring Manager | `hiring` | `Hiring@12345` | Chỉ 2 vị trí được giao (AI Engineer, Data Analyst); xem CV, thêm nhận xét; không sửa pipeline, không duyệt AI, không xem PII đầy đủ |
+| Quản trị viên | `admin` | `Admin@12345` | Toàn quyền, quản lý tài khoản, audit log |
+| Kiểm toán viên | `auditor` | `Auditor@12345` | Chỉ audit log và xuất audit; không xem ứng viên/PII/dashboard |
+
+Mật khẩu demo chỉ dùng cho môi trường học tập và được băm bằng bcrypt. Trong triển khai thật, đổi toàn bộ mật khẩu và tắt seed demo bằng `SEED_DEMO_DATA=false`.
+
+### 15.5. Kiểm thử
+
+```bash
+source .venv/bin/activate
+python -m pytest
+```
+
+Bộ test hiện có 40 test, bao phủ:
+
+- Chuẩn hóa email/ngày/trạng thái, ETL CSV/Excel, chống trùng, lỗi theo dòng.
+- Đăng nhập, bcrypt, ma trận quyền, phạm vi vị trí của Hiring Manager, che PII.
+- KPI, funnel, thời gian xử lý, tương thích lịch sử vòng.
+- Upload/đọc PDF, PDF scan cần OCR, trích xuất kỹ năng, chấm điểm và kiểm duyệt AI.
+- Cập nhật pipeline, ghi nhận xét, tạo/lưu trữ ứng viên.
+- Audit log, lọc metadata nhạy cảm, seed nhất quán và idempotent.
+
+Test dùng CSDL SQLite tạm và thư mục upload tạm, không ghi vào dữ liệu thật của ứng dụng.
+
+### 15.6. Dữ liệu mẫu
+
+- `data/sample/candidates_sample.csv`: 18 dòng, gồm dòng hợp lệ, dòng trùng email, email sai, thiếu họ tên, thiếu vị trí, ngày sai.
+- `data/sample/candidates_sample.xlsx`: cùng nội dung với CSV.
+- `data/sample/cv_nguyen_van_an.pdf`, `cv_tran_thi_binh.pdf`, `cv_le_minh_cuong.pdf`: CV có lớp văn bản để phân tích.
+- `data/sample/cv_scan_only.pdf`: PDF chỉ có hình, dùng minh họa trạng thái `NEEDS_OCR`.
+
+Tạo lại toàn bộ tệp mẫu:
+
+```bash
+python scripts/generate_sample_data.py
+```
+
+Seed demo hiện tạo 14 ứng viên, 15 hồ sơ ứng tuyển, 3 vị trí, 4 tài khoản, 4 kết quả phân tích CV và lịch sử vòng tuyển đầy đủ.
+
+### 15.7. Kiến trúc mã nguồn thực tế
+
+```text
+AIinHiring-System/
+├── app.py                     # entrypoint, đăng nhập, điều hướng theo vai trò
+├── pages/                     # 7 trang Streamlit
+├── src/
+│   ├── auth/                  # bcrypt, xác thực, RBAC, phạm vi dữ liệu, che PII
+│   ├── audit/                 # audit logger + lọc metadata nhạy cảm
+│   ├── analytics/             # KPI, funnel, thời gian vòng, bộ lọc
+│   ├── cv_analysis/           # PDF, từ điển kỹ năng, matching, review
+│   ├── database/              # models, connection, seed, sample data, queries
+│   ├── etl/                   # extract, transform, validate, load
+│   ├── ui/                    # layout, login, sidebar, CSS dùng chung
+│   ├── config.py              # biến môi trường
+│   └── constants.py           # enum, quyền, ánh xạ chuẩn hóa
+├── sql/schema.sql             # DDL PostgreSQL tham chiếu
+├── sql/seed.sql               # catalogue vai trò/vòng tuyển
+├── scripts/                   # init_db, generate_sample_data
+├── tests/                     # pytest
+├── data/sample/               # CSV/XLSX/PDF mẫu
+├── requirements.txt
+├── .env.example
+└── README.md
+```
+
+### 15.8. Những điểm đã hiện thực so với đặc tả
+
+**ETL và kho dữ liệu**
+
+- Hỗ trợ CSV, Excel `.xlsx` và API JSON (tải URL hoặc dán payload).
+- Tự nhận diện ánh xạ cột tiếng Việt/tiếng Anh, cho phép chỉnh tay trước khi nạp.
+- Chuẩn hóa email, tên, điện thoại, ngày, trạng thái, vòng tuyển.
+- Validate theo dòng, lưu `etl_runs` và `etl_row_errors`, hiển thị số đọc/hợp lệ/tạo mới/cập nhật/trùng/từ chối.
+- Transaction khi ghi dữ liệu; rollback và ghi run `FAILED` nếu lỗi hệ thống.
+- Chống trùng ứng viên theo email đã chuẩn hóa và chống trùng hồ sơ theo `(candidate_id, job_id)`.
+- Dòng thiếu email không bao giờ bị tự động gộp, đúng quy tắc README.
+- Ứng viên đã lưu trữ không bị ETL tự động mở lại hồ sơ.
+
+**Mô hình dữ liệu**
+
+- Ứng viên tách khỏi hồ sơ; một ứng viên có nhiều hồ sơ.
+- Lịch sử vòng là bảng sự kiện; `applications.current_stage_id` và `current_status` được đồng bộ khi chuyển vòng.
+- Ràng buộc khóa ngoại, `UNIQUE`, `CHECK`, chỉ mục; PostgreSQL có partial unique index bảo đảm mỗi hồ sơ chỉ có một vòng đang mở.
+- `user_job_assignments` giới hạn phạm vi Hiring Manager.
+- Trigger PostgreSQL cập nhật `updated_at`; SQLite dùng `onupdate` của SQLAlchemy.
+
+**Dashboard**
+
+- KPI: tổng hồ sơ, đang xử lý, đã tuyển, tỷ lệ tuyển, thời gian tuyển trung bình, thời gian chờ hiện tại.
+- Funnel theo vòng, tỷ lệ chuyển đổi từng vòng và tổng thể.
+- Thời gian hoàn tất/đang chờ tách riêng, không trộn hai loại.
+- Bộ lọc ngày, vị trí, phòng ban, nguồn, trạng thái; bảng chi tiết có phân trang và xuất CSV.
+- Hiring Manager chỉ thấy dữ liệu trong phạm vi vị trí; PII được che theo quyền.
+
+**CV/NLP**
+
+- Chỉ nhận PDF, kiểm tra phần mở rộng, magic bytes, MIME và kích thước.
+- Lưu file với tên ngẫu nhiên trong `UPLOAD_DIR`, chống path traversal, không phục vụ file qua URL công khai.
+- PyMuPDF trích xuất văn bản; PDF ảnh được đánh dấu `NEEDS_OCR` thay vì chấm điểm sai.
+- Trích xuất kỹ năng bằng từ điển + regex, không gửi CV ra dịch vụ AI bên ngoài.
+- Điểm khớp = số kỹ năng bắt buộc tìm thấy / tổng kỹ năng yêu cầu × 100; vị trí không cấu hình kỹ năng trả `NULL` / `NOT_SCORABLE`.
+- Lưu kết quả, tóm tắt heuristic, lịch sử phân tích và lịch sử kiểm duyệt.
+- HR/Admin duyệt, từ chối hoặc yêu cầu chỉnh sửa; từ chối/yêu cầu chỉnh sửa bắt buộc có lý do.
+
+**Bảo mật, RBAC và audit**
+
+- Kiểm tra quyền ở tầng nghiệp vụ, không chỉ ẩn menu.
+- Mặc định từ chối; kiểm tra cả quyền hành động và phạm vi hồ sơ.
+- Mật khẩu bcrypt (12 rounds), giới hạn 72 byte, không lưu plaintext.
+- Audit log cho đăng nhập, từ chối truy cập, ETL, chuyển vòng, nhận xét, upload/phân tích CV, duyệt AI, thao tác người dùng, xem/xuất dữ liệu.
+- Metadata audit được lọc các khóa nhạy cảm; IP sai định dạng bị bỏ qua thay vì làm hỏng đăng nhập.
+- CV và file tải lên nằm trong thư mục riêng, không commit.
+
+### 15.9. Kịch bản demo gợi ý
+
+1. Đăng nhập `hr`; mở **Tổng quan** để xem KPI, funnel và thời gian xử lý.
+2. Mở **Nhập dữ liệu ETL**, tải `data/sample/candidates_sample.csv`, xem ánh xạ cột, bấm **Nạp dữ liệu**, đối chiếu bảng lỗi và lịch sử ETL.
+3. Mở **Pipeline tuyển dụng**, chọn một hồ sơ, chuyển vòng/trạng thái và thêm nhận xét.
+4. Mở **Phân tích CV**, chọn hồ sơ, tải `cv_nguyen_van_an.pdf`, xem kỹ năng/điểm khớp, sau đó duyệt kết quả. Thử `cv_scan_only.pdf` để thấy `NEEDS_OCR`.
+5. Đăng xuất, đăng nhập `hiring`; xác nhận chỉ thấy 2 vị trí, dữ liệu liên hệ bị che, không có menu duyệt AI/quản lý người dùng.
+6. Đăng nhập `admin`; tạo/khóa tài khoản, gán phạm vi vị trí, xem audit log.
+7. Đăng nhập `auditor`; xác nhận chỉ thấy audit log và có thể xuất CSV.
+
+### 15.10. Xử lý sự cố thường gặp
+
+- **Không kết nối được PostgreSQL:** kiểm tra `DATABASE_URL`, driver `psycopg[binary]`, user/quyền database. Có thể bỏ trống `DATABASE_URL` để quay lại SQLite demo.
+- **Muốn reset dữ liệu demo:** dừng app, xóa `data/recruitment.db` và nội dung `data/uploads/`, sau đó chạy lại `python scripts/init_db.py`. Không xóa `data/sample/`.
+- **Cổng 8501 đang bận:** chạy `streamlit run app.py --server.port 8502`.
+- **PDF báo `NEEDS_OCR`:** đây là hành vi đúng với PDF không có lớp văn bản; OCR là phần mở rộng ngoài phạm vi MVP.
+- **Không thấy dữ liệu:** kiểm tra vai trò đang đăng nhập và phạm vi vị trí; Hiring Manager chỉ thấy hồ sơ thuộc vị trí được giao.
+
+### 15.11. Giới hạn của MVP
+
+- NLP dùng từ điển/regex và heuristic, không phải mô hình ngôn ngữ lớn; không có OCR.
+- Chưa có alembic migration; schema được tạo từ ORM hoặc `sql/schema.sql`.
+- SQLite phù hợp demo một người dùng; PostgreSQL là lựa chọn cho triển khai thật.
+- Chưa có hàng đợi xử lý nền cho file lớn; ETL chạy đồng bộ trong phiên Streamlit.
+- Điểm khớp chỉ hỗ trợ tham khảo; quyết định tuyển dụng vẫn do HR kiểm duyệt.
